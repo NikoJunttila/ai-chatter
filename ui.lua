@@ -62,7 +62,7 @@ end
 
 -- Render the entire chat history to the buffer
 function M.render_chat(state)
-  local lines = { "# Chat Box (Echo Mode)", "" }
+  local lines = { "# Chat Box", "" }
 
   -- Loop through all messages and add them to lines
   for _, msg in ipairs(state.chat_history) do
@@ -70,7 +70,9 @@ function M.render_chat(state)
       table.insert(lines, "**You:** " .. msg.content)
       table.insert(lines, "") -- Empty line for spacing
     else
-      table.insert(lines, "**Bot:** " .. msg.content)
+      table.insert(lines, "**Bot:**")
+      local bot_lines = vim.split(msg.content, "\n", { trimempty = true })
+      vim.list_extend(lines, bot_lines)
       table.insert(lines, "") -- Empty line for spacing
     end
   end

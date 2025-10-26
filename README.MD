@@ -1,0 +1,36 @@
+-- load plugin in plugins folder
+-- return {
+--   {
+--     dir = vim.fn.stdpath "config" .. "/lua/ollama-chat",
+--     name = "ollama-chat.nvim",
+--     lazy = false,
+--     config = function()
+--       require("ollama-chat").setup {}
+--
+--       -- Set up keybinding
+--       vim.keymap.set("n", "<leader>oc", function()
+--         require("ollama-chat").toggle()
+--       end, { desc = "Toggle Chat" })
+--
+--       vim.keymap.set("n", "<leader>oC", function()
+--         require("ollama-chat").clear()
+--       end, { desc = "Clear Chat History" })
+--     end,
+--   },
+-- }
+
+-- Load from github.
+-- return {
+--   {
+--     "yourusername/hello-world.nvim", -- replace with your GitHub username when published
+--     lazy = false, -- load on startup
+--     config = function()
+--       require("hello-world").setup {}
+--
+--       -- Set up keybinding
+--       vim.keymap.set("n", "<leader>hw", function()
+--         require("hello-world").say_hello()
+--       end, { desc = "Say Hello World" })
+--     end,
+--   },
+-- }
