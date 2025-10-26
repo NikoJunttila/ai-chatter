@@ -14,53 +14,9 @@ Chat with LLMs directly in Neovim with support for multiple backends (Ollama, Op
 
 ### With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
-```lua
-{
-  "nikojunttila/ai-chatter",
-  lazy = false,
-  config = function()
-    require("ai-chatter").setup({
-      backend = "groq", -- Choose: "ollama", "openai", "anthropic", "groq"
-      
-      -- Groq config (free tier available!)
-      groq = {
-        api_key = os.getenv("GROQ_API_KEY"),
-        model = "llama-3.3-70b-versatile",
-      },
-      
-      -- Ollama config (runs locally)
-      ollama = {
-        model = "gemma2:2b",
-        url = "http://127.0.0.1:11434/api/chat",
-      },
-      
-      -- OpenAI config
-      openai = {
-        api_key = os.getenv("OPENAI_API_KEY"),
-        model = "gpt-4o-mini",
-      },
-      
-      -- Anthropic config
-      anthropic = {
-        api_key = os.getenv("ANTHROPIC_API_KEY"),
-        model = "claude-3-5-haiku-20241022",
-        max_tokens = 4096,
-      },
-    })
-    
-    -- Optional keybindings
-    vim.keymap.set("n", "<leader>ac", function()
-      require("ai-chatter").open_chat()
-    end, { desc = "Open AI Chat" })
-    
-    vim.keymap.set("n", "<leader>ax", function()
-      require("ai-chatter").toggle_context_file()
-    end, { desc = "Toggle current buffer as context" })
-  end,
-}
-```
-
 ## 🚀 Usage
+
+Check example file
 
 ### Commands
 
