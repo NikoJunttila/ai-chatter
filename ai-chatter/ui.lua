@@ -83,8 +83,11 @@ function M.render_chat(state)
       table.insert(lines, "") -- Empty line for spacing
     else
       table.insert(lines, "**Bot:**")
-      local bot_lines = vim.split(msg.content, "\n", { trimempty = false })
-      vim.list_extend(lines, bot_lines)
+      -- Split by newlines but keep ALL lines including empty ones
+      local content_lines = vim.split(msg.content, "\n", { plain = true, trimempty = false })
+      for _, line in ipairs(content_lines) do
+        table.insert(lines, line)
+      end
       table.insert(lines, "") -- Empty line for spacing
     end
   end

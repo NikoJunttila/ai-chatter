@@ -35,6 +35,8 @@ function M.send_message(state)
     -- Remove thinking indicator
     table.remove(state.chat_history)
 
+    print("response: ", response)
+
     -- Add actual response
     table.insert(state.chat_history, {
       role = "assistant",
@@ -54,6 +56,7 @@ function M.get_response_async(state, callback)
     return
   end
 
+  print "get response called"
   -- Build request using backend
   local cmd_args = M.backend.build_request(M.backend_config, state.chat_history, state.context_files)
 
@@ -63,13 +66,20 @@ function M.get_response_async(state, callback)
       cmd_args,
       { text = true },
       vim.schedule_wrap(function(result)
+        print("vim.system callback called, code:", result.code) -- ADD THIS
         if result.code ~= 0 then
           callback("Error: Request failed with code " .. result.code .. "\n" .. (result.stderr or ""))
           return
         end
-
-        local response = M.backend.parse_response(result.stdout)
-        callback(response)
+        print "About to parse response" -- ADD THIS
+        local success, response = pcall(M.backend.parse_response, result.stdout)
+        if not success then
+          print("Parse error:", response) -- ADD THIS
+          callback("Error parsing response: " .. tostring(response))
+          return
+        end
+        print("Response parsed, length:", #response) -- ADD THIS
+        callback(response) -- ????
       end)
     )
   else

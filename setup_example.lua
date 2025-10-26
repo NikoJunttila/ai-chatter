@@ -1,10 +1,9 @@
 return {
 	{
-		dir = vim.fn.stdpath("config") .. "/lua/ollama-chat",
-		name = "ollama-chat.nvim",
+		"nikojunttila/ai-chatter",
 		lazy = false,
 		config = function()
-			require("ollama-chat").setup({
+			require("ai-chatter").setup({
 				-- Choose backend: "ollama", "openai", "anthropic", "groq"
 				backend = "groq",
 
@@ -42,21 +41,15 @@ return {
 			vim.keymap.set("n", "<leader>cf", function()
 				require("ollama-chat").browse_files()
 			end, { desc = "Browse context files" })
+
+			vim.keymap.set("n", "<leader>cR", function()
+				require("ollama-chat").reset_all()
+			end, { desc = "Reset chat & contexts" })
+
+			-- Info
+			vim.keymap.set("n", "<leader>cl", function()
+				require("ollama-chat").list_files()
+			end, { desc = "List context files" })
 		end,
 	},
 }
--- Load from github.
--- return {
---   {
---     "yourusername/hello-world.nvim", -- replace with your GitHub username when published
---     lazy = false, -- load on startup
---     config = function()
---       require("hello-world").setup {}
---
---       -- Set up keybinding
---       vim.keymap.set("n", "<leader>hw", function()
---         require("hello-world").say_hello()
---       end, { desc = "Say Hello World" })
---     end,
---   },
--- }
