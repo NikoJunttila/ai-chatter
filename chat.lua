@@ -1,96 +1,173 @@
 -- File 3: lua/ollama-chat/chat.lua
 local M = {}
 local ui = require "ollama-chat.ui"
+local backends = require "ollama-chat.backends"
+
+-- Current backend (set by init.lua)
+M.backend = nil
+M.backend_config = {}
 
 -- Send message function
 function M.send_message(state)
-  -- Step 1: Get the user's input from the buffer
   local user_message = ui.get_user_input(state)
 
-  -- Step 2: Validate that there's actually a message
   if user_message == "" then
     print "Please type a message first"
     return
   end
 
-  -- Step 3: Add user message to chat history
   table.insert(state.chat_history, {
     role = "user",
     content = user_message,
   })
 
-  -- Step 4: Get response from Ollama (with full history)
-  M.get_response(state)
-
-  -- Step 5: Re-render the entire chat with new messages
-  ui.render_chat(state)
-
-  -- Step 6: Add the input prompt again at the bottom
-  ui.add_input_prompt(state)
-
-  -- Step 7: Move cursor to the input area
-  ui.move_to_input(state)
-end
-
-function M.get_response(state)
-  local response = M.query_ollama_chat(state.chat_history)
+  -- Show thinking indicator
   table.insert(state.chat_history, {
     role = "assistant",
-    content = response,
+    content = "🤔 Thinking...",
   })
+
+  ui.render_chat(state)
+  ui.add_input_prompt(state)
+
+  -- Get response asynchronously
+  M.get_response_async(state, function(response)
+    -- Remove thinking indicator
+    table.remove(state.chat_history)
+
+    -- Add actual response
+    table.insert(state.chat_history, {
+      role = "assistant",
+      content = response,
+    })
+
+    ui.render_chat(state)
+    ui.add_input_prompt(state)
+    ui.move_to_input(state)
+  end)
 end
 
--- Helper function to escape strings for JSON
-local function json_escape(str)
-  local escape_chars = {
-    ["\\"] = "\\\\",
-    ['"'] = '\\"',
-    ["\n"] = "\\n",
-    ["\r"] = "\\r",
-    ["\t"] = "\\t",
-    ["\b"] = "\\b",
-    ["\f"] = "\\f",
-  }
-  return str:gsub('[\\"\n\r\t\b\f]', escape_chars)
-end
-
--- New function using /api/chat endpoint with conversation history
-function M.query_ollama_chat(chat_history)
-  -- Build messages array for the API with proper escaping
-  local messages = {}
-  for _, msg in ipairs(chat_history) do
-    local escaped_content = json_escape(msg.content)
-    table.insert(messages, string.format('{"role":"%s","content":"%s"}', msg.role, escaped_content))
+-- Async response function
+function M.get_response_async(state, callback)
+  if not M.backend then
+    callback "Error: No backend configured"
+    return
   end
-  local messages_json = "[" .. table.concat(messages, ",") .. "]"
 
-  -- Build full JSON payload
-  local json = string.format('{"model":"gemma3:270m","messages":%s,"stream":false}', messages_json)
+  -- Build request using backend
+  local cmd_args = M.backend.build_request(M.backend_config, state.chat_history, state.context_files)
 
-  local cmd = "curl -s http://127.0.0.1:11434/api/chat -d " .. vim.fn.shellescape(json)
+  -- Execute async
+  if vim.system then
+    vim.system(
+      cmd_args,
+      { text = true },
+      vim.schedule_wrap(function(result)
+        if result.code ~= 0 then
+          callback("Error: Request failed with code " .. result.code .. "\n" .. (result.stderr or ""))
+          return
+        end
 
-  local res = vim.fn.system(cmd)
-
-  -- Parse the response
-  -- For /api/chat, the response is in message.content
-  local content = res:match '"message"%s*:%s*{.-"content"%s*:%s*"(.-)"[,}]'
-
-  if content then
-    -- Unescape JSON escape sequences
-    content = content:gsub("\\n", "\n")
-    content = content:gsub("\\r", "\r")
-    content = content:gsub("\\t", "\t")
-    content = content:gsub('\\"', '"')
-    content = content:gsub("\\\\", "\\")
-    return content
+        local response = M.backend.parse_response(result.stdout)
+        callback(response)
+      end)
+    )
   else
-    -- Try to extract error message
-    local error_msg = res:match '"error"%s*:%s*"(.-)"'
-    if error_msg then
-      return "Error: " .. error_msg
-    end
-    return "Error: Could not parse response. Raw: " .. res:sub(1, 200)
+    -- Fallback for older Neovim
+    local stdout = vim.loop.new_pipe(false)
+    local stderr = vim.loop.new_pipe(false)
+    local stdout_data = ""
+    local stderr_data = ""
+
+    local handle
+    handle = vim.loop.spawn(
+      cmd_args[1],
+      {
+        args = vim.list_slice(cmd_args, 2),
+        stdio = { nil, stdout, stderr },
+      },
+      vim.schedule_wrap(function(code, signal)
+        stdout:close()
+        stderr:close()
+        handle:close()
+
+        if code ~= 0 then
+          callback("Error: Request failed with code " .. code .. "\n" .. stderr_data)
+          return
+        end
+
+        local response = M.backend.parse_response(stdout_data)
+        callback(response)
+      end)
+    )
+
+    stdout:read_start(function(err, data)
+      if err then
+        callback("Error reading stdout: " .. err)
+      elseif data then
+        stdout_data = stdout_data .. data
+      end
+    end)
+
+    stderr:read_start(function(err, data)
+      if err then
+        -- Ignore
+      elseif data then
+        stderr_data = stderr_data .. data
+      end
+    end)
   end
+end
+
+-- Add a file as context
+function M.add_context_file(state, filepath)
+  local expanded_path = vim.fn.expand(filepath)
+
+  if vim.fn.filereadable(expanded_path) == 0 then
+    print("Error: File not found: " .. expanded_path)
+    return false
+  end
+
+  -- Check if already added
+  for _, file in ipairs(state.context_files) do
+    if file.path == expanded_path then
+      print("File already added: " .. expanded_path)
+      return false
+    end
+  end
+
+  local lines = vim.fn.readfile(expanded_path)
+  local content = table.concat(lines, "\n")
+
+  if #content > 100000 then
+    local confirm = vim.fn.confirm("File is large (" .. math.floor(#content / 1024) .. "KB). Continue?", "&Yes\n&No", 2)
+    if confirm ~= 1 then
+      return false
+    end
+  end
+
+  table.insert(state.context_files, {
+    path = expanded_path,
+    name = vim.fn.fnamemodify(expanded_path, ":t"),
+    content = content,
+  })
+
+  print("Added context file: " .. expanded_path)
+  return true
+end
+
+function M.remove_context_file(state, index)
+  if index and state.context_files[index] then
+    local removed = table.remove(state.context_files, index)
+    print("Removed context file: " .. removed.path)
+    return true
+  end
+  return false
+end
+
+function M.clear_context_files(state)
+  state.context_files = {}
+  print "Cleared all context files"
 end
 
 return M

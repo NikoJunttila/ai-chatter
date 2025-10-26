@@ -62,7 +62,19 @@ end
 
 -- Render the entire chat history to the buffer
 function M.render_chat(state)
-  local lines = { "# Chat Box", "" }
+  local lines = { "# Chat Box" }
+
+  -- Show context files if any
+  if state.context_files and #state.context_files > 0 then
+    table.insert(lines, "")
+    table.insert(lines, "📎 **Context Files:**")
+    for i, file in ipairs(state.context_files) do
+      local size_kb = math.floor(#file.content / 1024)
+      table.insert(lines, string.format("  %d. %s (%dKB)", i, file.name, size_kb))
+    end
+  end
+
+  table.insert(lines, "")
 
   -- Loop through all messages and add them to lines
   for _, msg in ipairs(state.chat_history) do
@@ -71,7 +83,7 @@ function M.render_chat(state)
       table.insert(lines, "") -- Empty line for spacing
     else
       table.insert(lines, "**Bot:**")
-      local bot_lines = vim.split(msg.content, "\n", { trimempty = true })
+      local bot_lines = vim.split(msg.content, "\n", { trimempty = false })
       vim.list_extend(lines, bot_lines)
       table.insert(lines, "") -- Empty line for spacing
     end
@@ -123,8 +135,9 @@ function M.get_user_input(state)
       and not line:match "^%-+$" -- Not a separator line
       and not line:match "^Type your message" -- Not instructions
       and not line:match "^#" -- Not a header
-      and not line:match "^%*%*"
-    then -- Not a chat message
+      and not line:match "^%*%*" -- Not a chat message
+      and not line:match "^📎" -- Not context file indicator
+    then
       return line
     end
   end
