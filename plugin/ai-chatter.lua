@@ -12,7 +12,7 @@ vim.g.loaded_ai_chatter = true
 
 -- Create user commands
 vim.api.nvim_create_user_command("AiChatter", function()
-	require("ai-chatter").open_chat()
+	require("ai-chatter").open()
 end, {})
 
 vim.api.nvim_create_user_command("AiChatter", function()
