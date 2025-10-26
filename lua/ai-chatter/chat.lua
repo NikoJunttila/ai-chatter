@@ -1,7 +1,7 @@
--- File 3: lua/ollama-chat/chat.lua
+-- File 3: lua/ai-chatter/chat.lua
 local M = {}
-local ui = require "ollama-chat.ui"
-local backends = require "ollama-chat.backends"
+local ui = require "ai-chatter.ui"
+local backends = require "ai-chatter.backends"
 
 -- Current backend (set by init.lua)
 M.backend = nil

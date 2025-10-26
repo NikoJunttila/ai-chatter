@@ -1,4 +1,4 @@
--- File 2: lua/ollama-chat/ui.lua
+-- File 2: lua/ai-chatter/ui.lua
 -- UI rendering and window management
 
 local M = {}
@@ -36,7 +36,7 @@ function M.create_window(state)
   vim.api.nvim_win_set_option(state.win, "wrap", true) -- Enable word wrap
 
   -- Set keymaps for the chat window
-  local plugin = require "ollama-chat"
+  local plugin = require "ai-chatter"
   vim.keymap.set("n", "q", function()
     plugin.close()
   end, { buffer = state.buf, desc = "Close chat" })

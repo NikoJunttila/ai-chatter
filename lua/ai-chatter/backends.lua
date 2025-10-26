@@ -1,4 +1,4 @@
--- File 5: lua/ollama-chat/backends.lua
+-- File 5: lua/ai-chatter/backends.lua
 -- Backend implementations for different LLM APIs
 
 local M = {}
@@ -12,7 +12,7 @@ local function debug_log(message, data)
 		return
 	end
 
-	local log_file = io.open(vim.fn.stdpath("cache") .. "/ollama-chat-debug.log", "a")
+	local log_file = io.open(vim.fn.stdpath("cache") .. "/ai-chatter-debug.log", "a")
 	if log_file then
 		log_file:write(string.format("[%s] %s\n", os.date("%Y-%m-%d %H:%M:%S"), message))
 		if data then
